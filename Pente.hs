@@ -101,6 +101,16 @@ instance Minmax Pente where
     heuristic WinB = -infinity
     heuristic (Pente _ _ pairsA pairsB _ _) = int2Float (pairsA - pairsB)
 
+instance Show Tile where
+    show :: Tile -> String
+    show tile = case tile of
+        TEmpty -> "_"
+        TA -> "A"
+        TB -> "B"
+
+showBoard :: Seq.Seq Tile -> Int -> Int -> String
+showBoard board sizeX sizeY = foldMap (\i -> if (mod i sizeX == 0) then "\n" ++ show (board `Seq.index` i) else (show (board `Seq.index` i)) ) [0..(sizeX*sizeY-1)]
+
 instance Show Pente where
     show :: Pente -> String
     show pente = case pente of
@@ -108,4 +118,9 @@ instance Show Pente where
         WinB -> "B wins."
         (Pente player board pairsA pairsB sizeX sizeY) -> 
             "Turn: " ++ show player ++ "\n" ++
-            ""
+            "A Pairs: " ++ show pairsA ++ "\n" ++
+            "B Pairs: " ++ show pairsB ++ "\n" ++
+            showBoard board sizeX sizeY
+
+newBoard :: Int -> Pente
+newBoard n = Pente A  (Seq.replicate (n*n) TEmpty) 0 0 n n
