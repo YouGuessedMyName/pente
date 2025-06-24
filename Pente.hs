@@ -3,6 +3,9 @@ import Minmax
 import qualified Data.Sequence as Seq
 import Data.Foldable
 import GHC.Float
+import Debug.Trace
+
+-- TODO change board into an ADT which also contains the size and make lookup 2D!
 
 data Player = A | B deriving (Eq, Show)
 
@@ -40,6 +43,11 @@ data Pente =
     , sizeY         :: Int
     } deriving (Eq)
 
+-- Lookup relative to the given index
+-- x,y, sizeX, sizeY
+twoDLookup :: Int -> Int -> Int -> Int -> Seq.Seq a -> Maybe a
+twoDLookup = 
+
 {-| Calculate the next state of the board.
 
 Args:
@@ -48,11 +56,13 @@ Args:
 -}
 nextPente :: Pente -> Int -> Pente
 nextPente (Pente player board pairsA pairsB sizeX sizeY) index = 
-    let newBoard = Seq.update index (playerToTile player) board in
-        if (fiveRow index newBoard sizeX sizeY) then (playerToWin player) else
+    let newBoard = Seq.update index (playerToTile player) board 
+        in if (fiveRow index newBoard sizeX sizeY) then (playerToWin player) else
             let (n, newerBoard) = twoPair index newBoard sizeX sizeY in
             if (pairsA + n >= 5) then WinA 
-                else (Pente player newerBoard (pairsA+n) pairsB sizeX sizeY)
+                else let pairsA' = if player == A then pairsA+n else pairsA
+                         pairsB' = if player == B then pairsB+n else pairsB in
+                    (Pente { currentPlayer = (nextPlayer player), board = newerBoard, pairsA = pairsA', pairsB = pairsB', sizeX = sizeX, sizeY = sizeY })
 nextPente x _ = x
 
 -- Check if the index is part of a five row.
@@ -87,29 +97,34 @@ twoPair ind board sizeX sizeY =
                             (1, [i1, i2]) else (0, [])
         (count, toEmpty) = foldr (\x zr -> combine zr (tp x)) (0, []) [
             (ind-1, ind-2, ind-3), (ind+1, ind+2, ind+3), (ind-1*sizeX, ind-2*sizeX, ind-3*sizeX), (ind+1*sizeX, ind+2*sizeX, ind+3*sizeX),
+            (ind-1-1*sizeX, ind-2-2*sizeX, ind-2-2*sizeX),
             (ind+1-1*sizeX, ind+2-2*sizeX, ind+2-2*sizeX), (ind-1+1*sizeX, ind-2+2*sizeX, ind-2+2*sizeX), (ind+1+1*sizeX, ind+2+2*sizeX, ind+2+2*sizeX)]
         in (count, emptyTiles toEmpty board)
-          
 
 instance Minmax Pente where
     nextMoves :: Pente -> [Pente]
-    nextMoves pente@(Pente player board pairsA pairsB sizeX sizeY) = [nextPente pente i | i <- [0..sizeX*sizeY]]
+    nextMoves pente@(Pente player board pairsA pairsB sizeX sizeY) = [nextPente pente i | i <- [0..(sizeX-1)*(sizeY-1)], board `Seq.index` i == TEmpty]
     nextMoves x = [x]
 
     heuristic :: Pente -> Float
-    heuristic WinA = infinity
-    heuristic WinB = -infinity
+    heuristic WinA = -infinity
+    heuristic WinB = infinity
     heuristic (Pente _ _ pairsA pairsB _ _) = int2Float (pairsA - pairsB)
 
 instance Show Tile where
     show :: Tile -> String
     show tile = case tile of
-        TEmpty -> "_"
+        TEmpty -> " "
         TA -> "A"
         TB -> "B"
 
+
 showBoard :: Seq.Seq Tile -> Int -> Int -> String
-showBoard board sizeX sizeY = foldMap (\i -> if (mod i sizeX == 0) then "\n" ++ show (board `Seq.index` i) else (show (board `Seq.index` i)) ) [0..(sizeX*sizeY-1)]
+showBoard board sizeX sizeY = "\n   " ++ foldMap (\x -> show x ++ sp x ++ "|") [0..sizeX-1] ++
+    foldMap (\i -> if (mod i sizeX == 0) 
+        then "\n" ++ show (i `div` sizeX) ++ sp (i `div` sizeX) ++ "| " ++ show (board `Seq.index` i) 
+        else "| " ++ (show (board `Seq.index` i))) [0..(sizeX*sizeY-1)]
+    where sp x = if x < 10 then " " else ""
 
 instance Show Pente where
     show :: Pente -> String

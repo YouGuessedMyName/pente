@@ -19,11 +19,13 @@ Args:
     * depth (Int): The amount of turns to look ahead.
 Returns the board after the resulting move. -}
 solve :: (Minmax a) => a -> Int -> a
-solve problem depth = argmax (\x -> solveMin x (depth-1)) (nextMoves problem)
+solve problem depth =
+    argmax (\x -> solveMin x (depth-1)) (nextMoves problem)
 
 solveMax :: (Minmax a) => a -> Int -> Float
-solveMax problem 0 = heuristic problem
-solveMax problem n = maximum (map (\x -> solveMin x (n -1 )) (nextMoves problem))
+solveMax problem depth = if (depth <= 0) then (heuristic problem) 
+    else maximum (map (\x -> solveMin x (depth -1 )) (nextMoves problem))
 
 solveMin :: (Minmax a) => a -> Int -> Float
-solveMin problem n = minimum (map (\x -> solveMax x n) (nextMoves problem))
+solveMin problem depth = if (depth <= 0) then (heuristic problem) 
+    else minimum (map (\x -> solveMax x depth) (nextMoves problem))
